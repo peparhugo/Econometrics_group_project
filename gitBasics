@@ -1,0 +1,26 @@
+#setup:
+0. Register on github: https://github.com/
+1. Download the Git for windows from the following link and install
+   https://gitforwindows.org/
+2. Open Git bash
+3. cd to the folder in local where you want to hold the project
+3. Clone the project to the local folder by using the following command (in my case, I clone the project to the folder GroupProject)
+   git clone https://github.com/xuelicao/Econometrics_group_project.git GroupProject
+
+#commit the code changes or files (meaning transfer the changers/files to github respository)
+4. Check the status of the files
+   git status
+5. Create or update the code
+6. Add the changes to commit
+   git add *
+7. commit the changes
+   git commit -m "commit comment here"
+8. push to the github
+   git push
+9. One way to solve the confilict when pulling:
+   Delete the conflicting files (backup first).
+   Then use git reset --hard
+   then git pull can pull the most recent files.
+
+Note.
+Before each commit, need to pull the changes first use git pull.
