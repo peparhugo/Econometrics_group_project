@@ -17,14 +17,14 @@ import plotly.express as px
 df= pd.read_csv('JPM.csv')
 
 
-# In[4]:
+# In[3]:
 
 
 #view first 5 rows of JPM data
 df.head()
 
 
-# In[5]:
+# In[4]:
 
 
 #plot the adjusted close field overtime
@@ -32,21 +32,28 @@ fig = px.line(df, x=df['Date'], y=df['Adj Close'])
 fig.show()
 
 
-# In[6]:
+# In[5]:
 
 
 #output summary of data distribution
 df['Adj Close'].describe(percentiles=[0.05,0.1,0.25,.33,0.5,0.67,0.75,0.9,0.95,0.99])
 
 
-# In[7]:
+# In[6]:
 
 
 #calcalate mean stock value
 df['mean_stock_value']=df['Adj Close'].mean(0)
 
 
-# In[8]:
+# In[19]:
+
+
+#mean stock value
+df['mean_stock_value'].iloc[0]
+
+
+# In[7]:
 
 
 #calculate daily stock return using log returns and plot daily return data
@@ -55,7 +62,7 @@ fig = px.line(df, x=df['Date'], y=df['Daily Return Log'])
 fig.show()
 
 
-# In[9]:
+# In[8]:
 
 
 #calculate and plot the daily return percentage
@@ -64,47 +71,28 @@ fig = px.line(df, x=df['Date'], y=df['Daily Return Percent'])
 fig.show()
 
 
-# In[10]:
+# In[9]:
 
 
 #display first 5 and last 5 rows of data
 df
 
 
-# In[11]:
+# In[10]:
 
 
 #calculate volatility
 volatility=df['Daily Return Log'].std()*100
 
 
-# In[12]:
+# In[11]:
 
 
 #output volatility
 volatility
 
 
-# In[13]:
-
-
-df['Volatility_2nd']= ((df['Adj Close']-df['mean_stock_value'])**2)/df.shape[0]
-
-
-# In[14]:
-
-
-fig = px.line(df, x=df['Date'], y=df['Volatility_2nd'])
-fig.show()
-
-
-# In[16]:
-
-
-df[['Volatility_2nd']].describe()
-
-
-# In[17]:
+# In[18]:
 
 
 #export to other file formats
