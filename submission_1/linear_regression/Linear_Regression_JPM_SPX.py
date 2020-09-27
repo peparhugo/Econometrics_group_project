@@ -1,3 +1,9 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[21]:
+
+
 # -*- coding: utf-8 -*-
 """
 Created on Fri Sep 25 17:59:57 2020
@@ -23,3 +29,10 @@ regr.fit(X, Y)
 # Get values for Linear Regression Equation
 print('slope:', regr.coef_)
 print('intercept:', regr.intercept_)
+
+
+# In[ ]:
+
+
+
+
