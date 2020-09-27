@@ -3,6 +3,11 @@
 
 # # Univariate Time Series
 # 
+# ## Notebook
+# Author: Pepar Hugo
+# 
+# Date: September 23, 2020
+# 
 # ## Requirements
 # 
 # This notebook follows the outline provided in MScFE 610 Econ Group Work Projects:
@@ -20,6 +25,15 @@
 # Period considered in the analysis: January 1987 – latest data
 # 
 # Frequency: monthly data
+# 
+# ## References
+# 
+# - Brownlee, Jason. "How to Create an ARIMA Model for Time Series Forecasting in Python". August 19, 2020. https://machinelearningmastery.com/arima-for-time-series-forecasting-with-python/. [Online; accessed 2020-09-23].
+# - Ismiguzel, Idil. "Hands-on Time Series Forecasting with Python". June 1, 2020. https://towardsdatascience.com/hands-on-time-series-forecasting-with-python-d4cdcabf8aac. [Online; accessed 2020-09-25].
+# - Pedregosa et al. Scikit-learn: Machine Learning in Python, JMLR 12, pp. 2825-2830, 2011. http://jmlr.csail.mit.edu/papers/v12/pedregosa11a.html. [Online; accessed 2020-09-27].
+#  -  https://scikit-learn.org/stable/index.html. [Online; accessed 2020-09-27].
+# - Smith, Taylor G., et al. pmdarima: ARIMA estimators for Python, 2017-, http://www.alkaline-ml.com/pmdarima [Online; accessed 2020-09-27].
+# 
 # 
 
 # ## Import Libraries
@@ -47,13 +61,14 @@ from statsmodels.tsa.stattools import adfuller
 import pmdarima as pm
 #library for ARMIMA forecast
 from statsmodels.tsa.arima.model import ARIMA
-from statsmodels.tsa.arima_model import ARMA
+#library for model scoring
+from sklearn.metrics import mean_squared_error, explained_variance_score, mean_absolute_error
 
 
 # ## Get Data
 # I am pulling the csv data directly through a request. I used the browser `Inspect` function on [this page](https://fred.stlouisfed.org/series/CSUSHPISA) to see what url request downloaded the csv data. I copied that link and parased out the request parameters below into a dictionary called `params`. The params are passed in with csv url using `requests.get()` to download in the csv data.
 
-# In[42]:
+# In[2]:
 
 
 params={'bgcolor': '%23e1e9f0',
@@ -103,19 +118,24 @@ resp = requests.get(url=url,params=params)
 
 # ## Read data into a pandas dataframe & visualize the data
 # Pandas `read_csv` needs a string input output function `StringIO` from library `io` to read the csv data loaded into the response from csv request above. Usually the `read_csv` funtions takes a path to a csv file but I by passed save and reloading the data using the `StringIO` function.
+# 
+# Results:
+# 
+# From 2012 to today the data has a linear trend but prior to the 2008 drop is appears to have a non-linear trend.
 
-# In[44]:
+# In[3]:
 
 
 data= pd.read_csv(StringIO(resp.text),sep=',',parse_dates=['DATE'], index_col='DATE')
-data.plot(figsize=(10,4))
+data.plot(figsize=(8,4))
 plt.title('S&P/Case-Shiller U.S. National Home Price Index')
 plt.show()
 
 
-# In[45]:
+# In[4]:
 
 
+#see descirpion data to summarize the distribution of the data
 data.describe()
 
 
@@ -123,62 +143,22 @@ data.describe()
 # This section of the code passes the pandas dataframe `data` into an additive seasonal decomposition.
 # 
 # Notes:
-# There is little to no seaonal component since it ranges between -0.05 to 0.05 relative to the range of actual values from 64 to 218. The residual also has a wave pattern, which is most likely negatively correlated with seasonal component. I will take the decomposition output and run a correlation matrix to see if the seasonal component and the residual component are correlated.
+# There is little to no seaonal component since it ranges between -0.05 to 0.05 relative to the range of actual values from 64 to 218. The residual also has a wave pattern, which is most likely negatively correlated with seasonal component. It is possible to take the decomposition output and run a correlation matrix to see if the seasonal component and the residual component are correlated but this is outside the scope of this assignment so I will not run the correlation matrix.
 
-# In[53]:
+# In[22]:
 
 
+#selected additive model since 2012 displays linear trend 
+plt.rcParams['figure.figsize'] = [12, 12]
+plt.rcParams['figure.dpi'] = 100 
 decomp = seasonal_decompose(data, model='additive')
 decomp.plot()
-plt.rcParams['figure.figsize'] = [10, 8]
-plt.rcParams['figure.dpi'] = 100 
 plt.show()
 
 
-# ## Correlation of seaonal
-# This portion of the notebook will see if 
-
-# In[73]:
-
-
-from sklearn.preprocessing import MinMaxScaler
-
-
-# In[82]:
-
-
-#all data
-seasonal_data = decomp.seasonal.dropna()
-resid_data = decomp.resid.dropna()
-seasonal_resid_data=pd.DataFrame(MinMaxScaler().fit_transform(pd.concat([seasonal_data,resid_data],axis=1).dropna()),
-                                columns=['seasonal','resid'])
-#this is inefficient but it was easiest method to carry the index forward once I added the min max scaler
-seasonal_resid_data.index = pd.concat([seasonal_data,resid_data],axis=1).dropna().index
-seasonal_resid_data.corr()
-
-
-# In[86]:
-
-
-
-
-
-# In[87]:
-
-
-#2016 to now
-seasonal_resid_data.loc['2016-01-01':'2020-06-01'].corr()
-
-
-# In[88]:
-
-
-#pre-internet
-pd.concat([decomp.seasonal.dropna(),decomp.resid.dropna()],axis=1).dropna().loc['1987-01-01':'1998-12-01'].corr()
-
-
+# # 1. Forecast S&P/Case-Shiller U.S. National Home Price Index using an ARMA model
 # ## Run an acf and pacf plot
-# The code below runs a acf and pacf.
+# The code below runs a acf and pacf data.
 # 
 # Results:
 # The acf decays overtime following a linear trend and the pacf spikes through 2 lags. This means this is AR(2).
@@ -186,31 +166,31 @@ pd.concat([decomp.seasonal.dropna(),decomp.resid.dropna()],axis=1).dropna().loc[
 # 
 # This assumes the data is stationary.
 
-# In[138]:
+# In[6]:
 
 
 fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1, figsize=(14,6), sharex=False, sharey=False)
-plot_acf(data, lags=50, ax=ax1)
-plot_pacf(data, lags=50, ax=ax2)
+plot_acf(data, lags=60, ax=ax1)
+plot_pacf(data, lags=60, ax=ax2)
 plt.show()
 
 
 # # ARMA Forecast
-# The initial ARMA forecast using (2,0,0).
+# The initial ARMA forecast using (2,0,0). I will forecast 36 months out because the full dataset is 402 records. 36 months will show the forecast trend relative to the full 402 data points.
 # 
 # Results:
 # 
-# The forecast does not look right. I will try an Augmented Dickey-Fuller Test to see if the data is stationary. The null hypthesis of the Augmented Dickey-Fuller Test is the data is not stationary.
+# The trend forecast is clearly dampened. I will try an Augmented Dickey-Fuller Test to see if the data is stationary. The null hypthesis of the Augmented Dickey-Fuller Test is the data is not stationary.
 
-# In[ ]:
+# In[7]:
 
 
 model_1 = ARIMA(data, order=(2,0,0),freq='MS')
 model_fit = model_1.fit()
-output_1 = model_fit.forecast(steps=100,freq='MS')
+output_1 = model_fit.forecast(steps=36,freq='MS')
 
 
-# In[134]:
+# In[8]:
 
 
 forecast_1 = data.copy()
@@ -221,40 +201,42 @@ plt.title('S&P/Case-Shiller U.S. National Home Price Index')
 plt.show()
 
 
+# # 2.Implement the Augmented Dickey-Fuller Test for checking the existence of a unit root in Case-Shiller Index series
 # ## Augmented Dickey-Fuller Test 
 # 
 # Results:
 # 
 # **Test 1**
 # 
-# We failed to reject the null hypthesis because p=0.903413>0.05. This means the data is not stationary.
+# We failed to reject the null hypthesis because p-value=0.903413>0.05. This means the data is not stationary.
 # 
 # **Test 2**
 # 
-# We rejected the null hypthesis because p=0.049176>0.05. This means the data is stationary at p<0.05 but it is not stationary at 0.01.
+# We rejected the null hypthesis because p-value=0.049176<0.05. This means the data is stationary at p-value<0.05 but it is not stationary at p-value>0.01.
 
-# In[135]:
+# In[9]:
 
 
 #Test1
-dftest = adfuller(data)
-dfoutput = pd.Series(dftest[0:4], index=['Test Statistic','p-value','#Lags Used','Number of Observations Used'])
-for key, value in dftest[4].items():
-    dfoutput['Critical Value (%s)'%key] = value
-print(dfoutput)
+dftest_1 = adfuller(data)
+dftest_1_output = pd.Series(dftest_1[0:4], index=['Test Statistic','p-value','#Lags Used','Number of Observations Used'])
+for key, value in dftest_1[4].items():
+    dftest_1_output['Critical Value (%s)'%key] = value
+print(dftest_1_output)
 
 
-# In[136]:
+# In[10]:
 
 
 #Test2
-dftest = adfuller(data.diff().dropna())
-dfoutput = pd.Series(dftest[0:4], index=['Test Statistic','p-value','#Lags Used','Number of Observations Used'])
-for key, value in dftest[4].items():
-    dfoutput['Critical Value (%s)'%key] = value
-print(dfoutput)
+dftest_2 = adfuller(data.diff().dropna())
+dftest_2_output = pd.Series(dftest_2[0:4], index=['Test Statistic','p-value','#Lags Used','Number of Observations Used'])
+for key, value in dftest_2[4].items():
+    dftest_2_output['Critical Value (%s)'%key] = value
+print(dftest_2_output)
 
 
+# # 3. Implement an ARIMA(p,d,q) model. Determine p, d, q using Information Criterion or Box-Jenkins methodology. Comment the results.
 # ## ARIMA Forecast
 # Steps:
 # 
@@ -265,22 +247,42 @@ print(dfoutput)
 # 5. Plot Actuals and Forecast.
 # 6. Grid search for p and q using AIC minimzing objective.
 # 7. Forecast and plot AIC criterion.
+# 
+# Results:
+# 
+# Box-Jenkins method parameters
+# - p = 2 since pacf has significant spike at lag 2
+# - d = 1 since Augmented Dickey-Fuller Test was significant at 1 time differencing
+# - q = 0 since the acf shows linear decay
+# 
+# Information Criterion method parameters using a step search. The step search will select the model that minimizes AIC. 
+# - p = 2
+# - d = 1 since Augmented Dickey-Fuller Test was significant at 1 time differencing
+# - q = 1
+# 
+# Comments:
+# 
+# Both the Box-Jenkins (2,1,0) and Information Criterion (2,1,1) methods have damped trends but it decays at a slower rate than the ARMA of (2,0,0). I would say that these models need far more work and validation before a long-term forecast can be generated. Based on the output I would say the trend is being dampened too much and further analysis is required if a forecast model is required for long-term forecasting.
+# 
+# When I say long-term forecasting, I mean anything above 1 month incremental forecasts.
 
-# In[139]:
+# ## Box-Jenkins Method
+
+# In[11]:
 
 
 fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1, figsize=(14,6), sharex=False, sharey=False)
-plot_acf(data.diff().dropna(), lags=50, ax=ax1)
-plot_pacf(data.diff().dropna(), lags=50, ax=ax2)
+plot_acf(data.diff().dropna(), lags=60, ax=ax1)
+plot_pacf(data.diff().dropna(), lags=60, ax=ax2)
 plt.show()
 
 
-# In[143]:
+# In[12]:
 
 
 model_2 = ARIMA(data, order=(2,1,0),freq='MS')
 model_fit2 = model_2.fit()
-output_2 = model_fit2.forecast(steps=100,freq='MS')
+output_2 = model_fit2.forecast(steps=36,freq='MS')
 forecast_2 = pd.concat([forecast_1,output_2],axis=1)
 forecast_2.columns = [forecast_1.columns[0], 'Forecast (2,0,0)','Forecast (2,1,0)']
 forecast_2.plot(figsize=(10,4))
@@ -288,23 +290,33 @@ plt.title('S&P/Case-Shiller U.S. National Home Price Index')
 plt.show()
 
 
-# In[140]:
+# ## Information Criterion Method
+
+# In[13]:
 
 
-model = pm.auto_arima(data, d=1, D=1,
-                       trend='c', seasonal=False, 
-                      start_p=0, start_q=0, max_order=12, test='adf', max_p=12,
-                      error_action='ignore',  # don't want to know if an order does not work
-                    suppress_warnings=True,
-                      stepwise=True, trace=True)
+model = pm.auto_arima(data, 
+                      d=1, 
+                      D=1,
+                      trend='c', 
+                      seasonal=False, 
+                      start_p=0, 
+                      start_q=0, 
+                      max_order=6, 
+                      test='adf', 
+                      max_p=6,
+                      error_action='ignore',
+                      suppress_warnings=True,
+                      stepwise=True, 
+                      trace=True)
 
 
-# In[146]:
+# In[14]:
 
 
-model_3 = ARIMA(data, order=(2,1,0),freq='MS')
+model_3 = ARIMA(data, order=(2,1,1),freq='MS')
 model_fit3 = model_3.fit()
-output_3 = model_fit3.forecast(steps=100,freq='MS')
+output_3 = model_fit3.forecast(steps=36,freq='MS')
 forecast_3 = pd.concat([forecast_2,output_3],axis=1)
 forecast_3.columns = [forecast_1.columns[0], 'Forecast (2,0,0)','Forecast (2,1,0)','Forecast (2,1,1)']
 forecast_3.plot(figsize=(10,4))
@@ -312,14 +324,35 @@ plt.title('S&P/Case-Shiller U.S. National Home Price Index')
 plt.show()
 
 
+# In[15]:
+
+
+#table of forecasts
+forecast_3.loc['2020-07-01':]
+
+
+# # 4. Forecast the future evolution of Case-Shiller Index using the ARMA model. Test model using in-sample forecasts.
 # ## Forecast In-sample
 # This forecast will take 80% of the past data and 20% of the data back from 2020-06-01 to use a future data to compare 1 month incremental predictions.
 # 
 # eg. At time period June 01, 2016 will use 1987-01-01 to 2016-06-01 as data for an ARMA model and then predict the `CSUSHPISA` value for 2016-07-01, 1 month a head. Then the actual value will be appended to the data for an ARMA model so the historical data will be 1987-01-01 to 2016-07-01 and the next prediction will be for 2016-08-01.
+# 
+# Results:
+# 
+# - Mean Error: -0.041467
+# - Mean Squared Error: 0.036681
+# - Mean Absolute Error: 0.141743
+# - Mean Absolute Percentage Error: 0.075505%
+# - Variance Explained: 0.999892
+# 
+# The simple ARMA(2,0,0) model performs quite well for in-sample 1 month incremental forecasts for an 80/20 train-test split. The variance explained is incredibly high at 0.999892 with MAPE of 0.075505%. There is a slight bais for the model to over forecast on average by 0.041467 (ME).
+# 
+# It is important to note the 80/20 split set the start date of the test data at 2013-10-01. This is outside the housing market crash in the 2008 timeframe. The trend is also linear since 2012 for the housing index so even though the model has performed well, the nature of the test data is quite consistent. I would expect the model performance to be below the performance metric outputs in an actual production environment.
 
-# In[216]:
+# In[16]:
 
 
+#This code simulates time moving forward by making 1 month incremental forecasts
 #set size of historical data and size of "future" data
 size = int(data.shape[0] * 0.80)
 #split data based on size
@@ -342,65 +375,74 @@ for t in range(len(test)):
     history.append(test.iloc[t].values[0])
 
 
-# In[217]:
+# In[17]:
 
 
+#merge test data and 1 month incremental forecasts
 ppd_pred = test.copy()
-
-
-# In[218]:
-
-
 ppd_pred['Predictions (2,0,0)']=predictions
-
-
-# In[219]:
-
-
-ppd_pred
-
-
-# In[220]:
-
-
 ppd_pred['resid']=ppd_pred['Predictions (2,0,0)']-ppd_pred['CSUSHPISA']
+ppd_pred['resid_rel']=ppd_pred['resid']/ppd_pred['CSUSHPISA']
+
+ppd_pred.head(15)
 
 
-# In[222]:
+# In[18]:
 
 
-ppd_pred[['Predictions (2,0,0)','CSUSHPISA']].plot()
+#performance metrics
+print('Mean Error: {:f}'.format(ppd_pred.resid.mean()))
+
+print('Mean Squared Error: {:f}'.format(mean_squared_error(ppd_pred['CSUSHPISA'],
+                                                           ppd_pred['Predictions (2,0,0)'])))
+
+print('Mean Absolute Error: {:f}'.format(mean_absolute_error(ppd_pred['CSUSHPISA'],
+                                                             ppd_pred['Predictions (2,0,0)'])))
+
+print('Mean Absolute Percentage Error: {:f}%'.format(ppd_pred['resid_rel'].abs().mean()*100))
+
+print('Variance Explained: {:f}'.format(explained_variance_score(ppd_pred['CSUSHPISA'],
+                                                                 ppd_pred['Predictions (2,0,0)'])))
+
+
+# ## Visualize Predictions, Residuals and Percentage Residuals
+
+# In[19]:
+
+
+#plot actuals and forecast
+ppd_pred[['CSUSHPISA','Predictions (2,0,0)']].plot()
 plt.title('S&P/Case-Shiller U.S. National Home Price Index')
 plt.show()
 
 
-# In[226]:
+# In[20]:
 
 
+#plot residuals
 plt.plot(ppd_pred[['resid']])
-plt.title('Residuals')
+plt.title('Residuals of ARMA(2,0,0)')
 plt.show()
 
 
-# In[224]:
+# In[21]:
 
 
-
-ppd_pred['resid_perc']=ppd_pred['resid']/ppd_pred['CSUSHPISA']
-ax = ppd_pred['resid_perc'].plot()
-type(ax)  # matplotlib.axes._subplots.AxesSubplot
-
-# manipulate
+#plot precentage residuals
+ax = ppd_pred['resid_rel'].plot()
+# set ticks to percentage
 vals = ax.get_yticks()
-ax.set_yticklabels(['{:,.2%}'.format(x) for x in vals])
-plt.title('Percentage Residuals')
+ax.set_yticklabels(['{:,.1%}'.format(x) for x in vals])
+plt.title('Percentage Residuals of ARMA(2,0,0)')
 plt.show()
 
 
-# In[211]:
+# In[24]:
 
 
-ppd_pred['resid_perc'].describe()
+#export to other file formats
+get_ipython().system('jupyter nbconvert --to html "Univariate Time Series.ipynb"')
+get_ipython().system('jupyter nbconvert --to python "Univariate Time Series.ipynb"')
 
 
 # In[ ]:
