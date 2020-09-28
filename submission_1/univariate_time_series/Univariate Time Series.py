@@ -145,7 +145,7 @@ data.describe()
 # Notes:
 # There is little to no seaonal component since it ranges between -0.05 to 0.05 relative to the range of actual values from 64 to 218. The residual also has a wave pattern, which is most likely negatively correlated with seasonal component. It is possible to take the decomposition output and run a correlation matrix to see if the seasonal component and the residual component are correlated but this is outside the scope of this assignment so I will not run the correlation matrix.
 
-# In[22]:
+# In[5]:
 
 
 #selected additive model since 2012 displays linear trend 
@@ -297,8 +297,7 @@ plt.show()
 
 model = pm.auto_arima(data, 
                       d=1, 
-                      D=1,
-                      trend='c', 
+                      D=1, 
                       seasonal=False, 
                       start_p=0, 
                       start_q=0, 
@@ -333,54 +332,37 @@ forecast_3.loc['2020-07-01':]
 
 # # 4. Forecast the future evolution of Case-Shiller Index using the ARMA model. Test model using in-sample forecasts.
 # ## Forecast In-sample
-# This forecast will take 80% of the past data and 20% of the data back from 2020-06-01 to use a future data to compare 1 month incremental predictions.
 # 
-# eg. At time period June 01, 2016 will use 1987-01-01 to 2016-06-01 as data for an ARMA model and then predict the `CSUSHPISA` value for 2016-07-01, 1 month a head. Then the actual value will be appended to the data for an ARMA model so the historical data will be 1987-01-01 to 2016-07-01 and the next prediction will be for 2016-08-01.
+# The code below creates a ARIMA(2,0,0) model and uses in-sample predictions to measure model performance.
 # 
 # Results:
 # 
-# - Mean Error: -0.041467
-# - Mean Squared Error: 0.036681
-# - Mean Absolute Error: 0.141743
-# - Mean Absolute Percentage Error: 0.075505%
-# - Variance Explained: 0.999892
+# - Mean Error: -0.019769
+# - Mean Squared Error: 0.064668
+# - Mean Absolute Error: 0.147052
+# - Mean Absolute Percentage Error: 0.105726%
+# - Variance Explained: 0.999969
 # 
-# The simple ARMA(2,0,0) model performs quite well for in-sample 1 month incremental forecasts for an 80/20 train-test split. The variance explained is incredibly high at 0.999892 with MAPE of 0.075505%. There is a slight bais for the model to over forecast on average by 0.041467 (ME).
+# The simple ARMA(2,0,0) model performs quite well for in-sample forecasts. The variance explained is incredibly high at 0.999969 with MAPE of 0.105726%. There is a slight bais for the model to under forecast on average by -0.019769 (ME).
 # 
-# It is important to note the 80/20 split set the start date of the test data at 2013-10-01. This is outside the housing market crash in the 2008 timeframe. The trend is also linear since 2012 for the housing index so even though the model has performed well, the nature of the test data is quite consistent. I would expect the model performance to be below the performance metric outputs in an actual production environment.
+# It is also important to note we are measuring model performance against data that was to used to fit the model. This means these performance metrics are most likely over-estimate the model's performance. It is important to use out of sample data to measure model performance because out of sample data would measure model performance on data it has not seen before.
 
 # In[16]:
 
 
-#This code simulates time moving forward by making 1 month incremental forecasts
 #set size of historical data and size of "future" data
-size = int(data.shape[0] * 0.80)
-#split data based on size
-train, test = data[0:size], data[size:data.shape[0]]
-#extract list of values
-history = [x[1].CSUSHPISA for x in train.iterrows()]
-#create empty list for storing incremental predictions
-predictions = list()
-#loop through test data for incremental predictions
-for t in range(len(test)):
-    #create ARMA model using current history
-    model = ARIMA(history, order=(2,0,0))
-    #fit model
-    model_fit = model.fit()
-    #create forecast
-    output = model_fit.forecast(steps=1)
-    #append next month forecast
-    predictions.append(output[0])
-    #append this month to history to simulate time moving forward
-    history.append(test.iloc[t].values[0])
+model = ARIMA(data['CSUSHPISA'].tolist(), order=(2,0,0))
+#fit model
+model_fit = model.fit()
 
 
 # In[17]:
 
 
 #merge test data and 1 month incremental forecasts
-ppd_pred = test.copy()
-ppd_pred['Predictions (2,0,0)']=predictions
+ppd_pred = data.iloc[1:].copy()
+#in-sample predictions
+ppd_pred['Predictions (2,0,0)']=model_fit.predict()[1:]
 ppd_pred['resid']=ppd_pred['Predictions (2,0,0)']-ppd_pred['CSUSHPISA']
 ppd_pred['resid_rel']=ppd_pred['resid']/ppd_pred['CSUSHPISA']
 
@@ -437,7 +419,7 @@ plt.title('Percentage Residuals of ARMA(2,0,0)')
 plt.show()
 
 
-# In[24]:
+# In[22]:
 
 
 #export to other file formats
