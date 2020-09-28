@@ -123,12 +123,14 @@ resp = requests.get(url=url,params=params)
 # 
 # From 2012 to today the data has a linear trend but prior to the 2008 drop is appears to have a non-linear trend.
 
-# In[3]:
+# In[34]:
 
 
 data= pd.read_csv(StringIO(resp.text),sep=',',parse_dates=['DATE'], index_col='DATE')
 data.plot(figsize=(8,4))
 plt.title('S&P/Case-Shiller U.S. National Home Price Index')
+plt.ylabel('Index Jan 2000=100, Seasonally Adjusted')
+plt.xlabel('Date')
 plt.show()
 
 
@@ -190,7 +192,7 @@ model_fit = model_1.fit()
 output_1 = model_fit.forecast(steps=36,freq='MS')
 
 
-# In[8]:
+# In[33]:
 
 
 forecast_1 = data.copy()
@@ -198,6 +200,8 @@ forecast_1 = pd.concat([forecast_1,output_1],axis=1)
 forecast_1.columns = [forecast_1.columns[0], 'Forecast']
 forecast_1.plot(figsize=(10,4))
 plt.title('S&P/Case-Shiller U.S. National Home Price Index')
+plt.ylabel('Index Jan 2000=100, Seasonally Adjusted')
+plt.xlabel('Date')
 plt.show()
 
 
@@ -277,7 +281,7 @@ plot_pacf(data.diff().dropna(), lags=60, ax=ax2)
 plt.show()
 
 
-# In[12]:
+# In[32]:
 
 
 model_2 = ARIMA(data, order=(2,1,0),freq='MS')
@@ -287,6 +291,8 @@ forecast_2 = pd.concat([forecast_1,output_2],axis=1)
 forecast_2.columns = [forecast_1.columns[0], 'Forecast (2,0,0)','Forecast (2,1,0)']
 forecast_2.plot(figsize=(10,4))
 plt.title('S&P/Case-Shiller U.S. National Home Price Index')
+plt.ylabel('Index Jan 2000=100, Seasonally Adjusted')
+plt.xlabel('Date')
 plt.show()
 
 
@@ -310,7 +316,7 @@ model = pm.auto_arima(data,
                       trace=True)
 
 
-# In[14]:
+# In[31]:
 
 
 model_3 = ARIMA(data, order=(2,1,1),freq='MS')
@@ -320,6 +326,8 @@ forecast_3 = pd.concat([forecast_2,output_3],axis=1)
 forecast_3.columns = [forecast_1.columns[0], 'Forecast (2,0,0)','Forecast (2,1,0)','Forecast (2,1,1)']
 forecast_3.plot(figsize=(10,4))
 plt.title('S&P/Case-Shiller U.S. National Home Price Index')
+plt.ylabel('Index Jan 2000=100, Seasonally Adjusted')
+plt.xlabel('Date')
 plt.show()
 
 
@@ -345,7 +353,7 @@ forecast_3.loc['2020-07-01':]
 # 
 # The simple ARMA(2,0,0) model performs quite well for in-sample forecasts. The variance explained is incredibly high at 0.999969 with MAPE of 0.105726%. There is a slight bais for the model to under forecast on average by -0.019769 (ME).
 # 
-# It is also important to note we are measuring model performance against data that was to used to fit the model. This means these performance metrics are most likely over-estimate the model's performance. It is important to use out of sample data to measure model performance because out of sample data would measure model performance on data it has not seen before.
+# It is also important to note we are measuring model performance against data that was to used to fit the model. This means these performance metrics are most likely over-estimate the model's performance in production. It is important to use out of sample data to measure model performance because out of sample data would measure model performance on data it has not seen before.
 
 # In[16]:
 
@@ -389,25 +397,29 @@ print('Variance Explained: {:f}'.format(explained_variance_score(ppd_pred['CSUSH
 
 # ## Visualize Predictions, Residuals and Percentage Residuals
 
-# In[19]:
+# In[30]:
 
 
 #plot actuals and forecast
 ppd_pred[['CSUSHPISA','Predictions (2,0,0)']].plot()
 plt.title('S&P/Case-Shiller U.S. National Home Price Index')
+plt.ylabel('Index Jan 2000=100, Seasonally Adjusted')
+plt.xlabel('Date')
 plt.show()
 
 
-# In[20]:
+# In[29]:
 
 
 #plot residuals
 plt.plot(ppd_pred[['resid']])
 plt.title('Residuals of ARMA(2,0,0)')
+plt.ylabel('Residual (Index Jan 2000=100, Seasonally Adjusted)')
+plt.xlabel('Date')
 plt.show()
 
 
-# In[21]:
+# In[27]:
 
 
 #plot precentage residuals
@@ -416,10 +428,12 @@ ax = ppd_pred['resid_rel'].plot()
 vals = ax.get_yticks()
 ax.set_yticklabels(['{:,.1%}'.format(x) for x in vals])
 plt.title('Percentage Residuals of ARMA(2,0,0)')
+plt.ylabel('Percent Residual (%)')
+plt.xlabel('Date')
 plt.show()
 
 
-# In[22]:
+# In[23]:
 
 
 #export to other file formats
