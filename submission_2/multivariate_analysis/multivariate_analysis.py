@@ -140,13 +140,13 @@ for key, value in dftest_1[4].items():
 print(dftest_1_output)
 
 
-# In[28]:
+# In[14]:
 
 
 #merge data on year/date/time index
 data = pd.concat([exchange_rate['AEXCAUS'],
            np.log(oil['DCOILWTICO']),
-           tot['tot'],
+           np.log(tot['tot']),
            cpi_ir['CPI_IR'],
            debt['rel_debt'],
            ri_ir['RI_IR']
@@ -154,7 +154,7 @@ data = pd.concat([exchange_rate['AEXCAUS'],
           axis=1).dropna()
 
 
-# In[29]:
+# In[15]:
 
 
 from statsmodels.tsa.vector_ar.vecm import VECM, select_coint_rank
@@ -165,7 +165,7 @@ vec_rank = select_coint_rank(data, det_order = 1, k_ar_diff = 1, method = 'trace
 print(vec_rank.summary())
 
 
-# In[30]:
+# In[16]:
 
 
 #eigen rank
@@ -174,7 +174,7 @@ vec_rank2 = select_coint_rank(data, det_order = 1, k_ar_diff = 1, method = 'maxe
 print(vec_rank2.summary())
 
 
-# In[33]:
+# In[17]:
 
 
 #fit model and print predictions (i have no idea what predictions is returning, future values, in-sample values?)
