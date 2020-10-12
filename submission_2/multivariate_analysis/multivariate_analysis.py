@@ -53,7 +53,7 @@ cpi_ir['CPI_IR']=cpi_ir['CAN']-cpi_ir['USA']
 # In[5]:
 
 
-#get itnerest rate data
+#get interest rate data
 ri_ir = data_frames['DP_LIVE_10102020214019137.csv'][data_frames['DP_LIVE_10102020214019137.csv'].LOCATION!='OECD'].pivot(index='TIME',columns='LOCATION',values='Value').dropna()
 ri_ir['INT_IR']=ri_ir['CAN']-ri_ir['USA']
 
@@ -143,7 +143,7 @@ print(vec_rank2.summary())
 print("max eigen cointegration rank: ", vec_rank2.rank)
 
 
-# In[15]:
+# In[23]:
 
 
 ## fit model nc model
@@ -153,14 +153,14 @@ vecm = VECM(endog = data, k_ar_diff = 2, coint_rank =4, deterministic = 'nc')
 vecm_fit = vecm.fit()
 
 
-# In[16]:
+# In[24]:
 
 
 #create plot for equilbirum exchange vs acutal exchange
 nc_equilibrium = pd.DataFrame(vecm_fit.resid)[0].values + data['AEXCAUS'].iloc[3:].values
 pd.DataFrame([pd.DataFrame(vecm_fit.resid)[0].values + data['AEXCAUS'].iloc[3:].values,
               data['AEXCAUS'].iloc[3:].values],
-             index=['Lag Diff 4 Equilibrium','Actuals'],
+             index=['Coint 4 Equilibrium','Actuals'],
              columns=data['AEXCAUS'].iloc[3:].index)\
 .T\
 .plot(figsize=(10,7),
@@ -170,7 +170,7 @@ pd.DataFrame([pd.DataFrame(vecm_fit.resid)[0].values + data['AEXCAUS'].iloc[3:].
      )
 
 
-# In[17]:
+# In[25]:
 
 
 #try the alternative rank of 5
@@ -180,11 +180,11 @@ vecm_fit = vecm.fit()
 pd.DataFrame([nc_equilibrium,
               data['AEXCAUS'].iloc[3:].values,
              pd.DataFrame(vecm_fit.resid)[0].values + data['AEXCAUS'].iloc[3:].values],
-             index=['Lag Diff 4 Equilibrium','Actuals','Lag Diff 5 Equilibrium'],
+             index=['Coint 4 Equilibrium','Actuals','Coint 5 Equilibrium'],
              columns=data['AEXCAUS'].iloc[3:].index)\
 .T\
 .plot(figsize=(10,7),
-      title = 'CAD/USD FX Equilibrium vs Actuals Overtime - colo Model',
+      title = 'CAD/USD FX Equilibrium vs Actuals Overtime - Lag Diffs 4 and 5',
       xlabel = 'Year',
       ylabel = 'CAD/USD'
      )
